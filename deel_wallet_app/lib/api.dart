@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 /// Backend de prod sur Render — plus d'ecran de config, une seule cible.
-const _baseUrl = 'https://baou-finance-backend.onrender.com';
+const _baseUrl = 'https://baou-finance-backend-ef08.onrender.com';
 
 /// ponytail: 60 s et pas 10 s -- l'instance Render gratuite s'endort et met
 /// ~50 s a se reveiller ; a 10 s la 1re requete (souvent l'inscription)

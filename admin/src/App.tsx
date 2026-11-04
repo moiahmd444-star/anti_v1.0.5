@@ -21,7 +21,7 @@ import {
 // ── Backend URL ───────────────────────────────────────────────────────────────
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || 
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
-    ? 'https://baou-finance-backend.onrender.com/api' 
+    ? 'https://baou-finance-backend-ef08.onrender.com/api' 
     : 'http://localhost:3001/api');
 const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23ff8200"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.83-2.61.03-1.6 3.22-2.47 4.83-2.47s4.8 1.87 4.83 2.47C15.8 18.96 14.03 20 12 20z"/></svg>';
 
