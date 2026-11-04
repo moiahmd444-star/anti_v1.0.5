@@ -6,6 +6,7 @@ Idempotent : relancable a chaque demarrage sans dupliquer ni ecraser.
 import datetime as dt
 import os
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from api.models import Ticket, Transaction, User
@@ -17,7 +18,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         email = os.environ.get("ADMIN_EMAIL", "admin@elephantbourse.ci")
-        password = os.environ.get("ADMIN_PASSWORD", "admin2024")
+        password = os.environ.get("ADMIN_PASSWORD") or ("admin2024" if settings.ALLOW_DEV_DEFAULTS else "")
+        if not password:
+            self.stdout.write("ADMIN_PASSWORD absent : compte admin non cree ni modifie.")
+            User.objects.filter(email="demo@baou.ci").update(kyc="suspended", balance=0)
+            return
 
         admin, created = User.objects.get_or_create(
             id="ADMIN-001",
@@ -31,7 +36,14 @@ class Command(BaseCommand):
                 "joined_at": dt.datetime.now(dt.timezone.utc).isoformat(),
             },
         )
+        if not created and os.environ.get("ADMIN_PASSWORD"):
+            admin.password = hash_password(password)  # la variable fait foi : permet de la changer
+            admin.save(update_fields=["password"])
         self.stdout.write(f"Admin {'cree' if created else 'deja present'} : {admin.email}")
+
+        if not settings.ALLOW_DEV_DEFAULTS:
+            User.objects.filter(email="demo@baou.ci").update(kyc="suspended", balance=0)
+            return
 
         Ticket.objects.get_or_create(
             id="TKT-1002",

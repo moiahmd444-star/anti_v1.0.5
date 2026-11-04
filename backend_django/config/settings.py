@@ -42,7 +42,7 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 465))
 EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "1") == "1"
 EMAIL_USE_TLS = not EMAIL_USE_SSL
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "baoufinance@gmail.com")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "htcqixyzoybunpig")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"BAOU Finance <{EMAIL_HOST_USER}>")
 EMAIL_TIMEOUT = 10
 
@@ -56,6 +56,10 @@ BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "http://localhost:3001
 # JEKO_WEBHOOK_SECRET signe les webhooks entrants (HMAC-SHA256) -- meme page,
 # section webhook. Tant que ces valeurs sont vides, les depots echouent avec
 # un message explicite (voir create_transaction) plutot que de planter.
+# Valeurs de dev (depot simule, admin par defaut, compte demo) : jamais en production.
+# Actif en DEBUG ou avec ALLOW_DEV_DEFAULTS=1 (CI, docker-compose local).
+ALLOW_DEV_DEFAULTS = DEBUG or os.environ.get("ALLOW_DEV_DEFAULTS") == "1"
+
 JEKO_API_KEY = os.environ.get("JEKO_API_KEY", "")
 JEKO_API_KEY_ID = os.environ.get("JEKO_API_KEY_ID", "")
 JEKO_STORE_ID = os.environ.get("JEKO_STORE_ID", "")

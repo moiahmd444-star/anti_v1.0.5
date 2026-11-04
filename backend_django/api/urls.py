@@ -32,7 +32,6 @@ urlpatterns = [
     path("api/admin/audit", views.admin_audit),
     path("api/admin/export/orders", views.admin_export_orders),
     path("api/admin/users", views.admin_users),
-    path("api/admin/users/cleanup", views.admin_cleanup_users),
     path("api/admin/users/<str:user_id>", views.admin_delete_user),
     path("api/admin/users/<str:user_id>/kyc", views.admin_user_kyc),
     path("api/admin/users/<str:user_id>/suspend", views.admin_user_suspend),

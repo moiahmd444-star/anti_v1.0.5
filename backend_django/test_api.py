@@ -214,21 +214,25 @@ def main():
          token=token, expect=400)
 
     # Achat : frais 0,5 % + TVA 18 % sur les frais, statut pending
-    qty, price = 2, 1000.0
+    from decimal import Decimal, ROUND_HALF_UP
+    q = lambda x: float(Decimal(str(x)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    qty, price = 2, snts["price"]  # le serveur ignore le prix envoye et prend celui du marche
+    gross = Decimal(str(price)) * qty
+    fee, vat = gross * Decimal("0.005"), gross * Decimal("0.005") * Decimal("0.18")
     buy = call("POST", "/api/transactions",
                {"ticker": "SNTS", "type": "BUY", "quantity": qty, "price": price},
                token=token, expect=201)["data"]
-    assert buy["total"] == 2000.0, buy
-    assert buy["fees"] == 10.0, buy
-    assert buy["tva"] == 1.8, buy
-    assert buy["grandTotal"] == 2011.8, buy
+    assert buy["total"] == q(gross), buy
+    assert buy["fees"] == q(fee), buy
+    assert buy["tva"] == q(vat), buy
+    assert buy["grandTotal"] == q(gross + fee + vat), buy
     assert buy["status"] == "pending", buy
 
     # Validation admin : le solde est debite du grandTotal
     call("PATCH", f"/api/transactions/{buy['id']}/validate", {}, token=admin_token)
     call("PATCH", f"/api/transactions/{buy['id']}/validate", {}, token=admin_token, expect=400)
     me = next(u for u in call("GET", "/api/admin/users", token=admin_token)["data"] if u["id"] == user["id"])
-    assert me["balance"] == round(500000 - 2011.8, 2), me["balance"]
+    assert me["balance"] == q(Decimal(500000) - (gross + fee + vat).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)), me["balance"]
 
     # Rejet
     sell = call("POST", "/api/transactions",
@@ -237,6 +241,13 @@ def main():
     rejected = call("PATCH", f"/api/transactions/{sell['id']}/reject",
                     {"reason": "Test"}, token=admin_token)["data"]
     assert rejected["status"] == "rejected" and rejected["rejectionReason"] == "Test"
+
+    # Prix truque : le serveur prend le cours du marche, pas celui du client
+    cheap = call("POST", "/api/transactions",
+                 {"ticker": "SNTS", "type": "BUY", "quantity": 1, "price": 1},
+                 token=token, expect=201)["data"]
+    assert cheap["price"] == price, cheap
+    call("PATCH", f"/api/transactions/{cheap['id']}/reject", {"reason": "test prix"}, token=admin_token)
 
     # Vente > titres detenus (2 SNTS valides) -> refuse
     call("POST", "/api/transactions",
@@ -247,10 +258,10 @@ def main():
     sell2 = call("POST", "/api/transactions",
                  {"ticker": "SNTS", "type": "SELL", "quantity": qty, "price": price},
                  token=token, expect=201)["data"]
-    assert sell2["total"] == round(2000.0 - 10.0 - 1.8, 2), sell2
+    assert sell2["total"] == q(gross - fee - vat), sell2
     call("PATCH", f"/api/transactions/{sell2['id']}/validate", {}, token=admin_token)
     me2 = next(u for u in call("GET", "/api/admin/users", token=admin_token)["data"] if u["id"] == user["id"])
-    assert me2["balance"] == round(me["balance"] + 1988.2, 2), me2["balance"]
+    assert me2["balance"] == round(me["balance"] + q(gross - fee - vat), 2), me2["balance"]
 
     # Les titres sont maintenant vendus : impossible de les revendre
     call("POST", "/api/transactions",

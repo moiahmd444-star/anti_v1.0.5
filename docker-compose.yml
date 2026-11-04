@@ -21,6 +21,7 @@ services:
       POSTGRES_HOST: db
       BRVM_DATA_DIR: /data/brvm_data
       UPLOAD_DIR: /data/uploads
+      ALLOW_DEV_DEFAULTS: "1"
     volumes:
       - ./data/brvm_data:/data/brvm_data:ro
       - ./data/uploads:/data/uploads

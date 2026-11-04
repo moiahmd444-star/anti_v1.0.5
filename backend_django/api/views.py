@@ -135,9 +135,10 @@ def session_of(request):
     if not token:
         return None
     try:
-        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
     except jwt.PyJWTError:
         return None
+    return None if payload.get("purpose") else payload
 
 
 def require_auth(admin=False):
@@ -930,6 +931,8 @@ def create_transaction(request, sess):
                 )
                 _credit_deposit(tx)
             return Response({"success": True, "data": tx.as_dict()}, status=201)
+        if not settings.JEKO_API_KEY and not settings.ALLOW_DEV_DEFAULTS:
+            return Response({"error": "Paiement indisponible pour le moment."}, status=503)
         if not settings.JEKO_API_KEY:
             # ponytail: aucune cle Jeko configuree (dev local sans .env.docker
             # rempli, ou CI -- voir .github/workflows/build.yml) -> repli sur
@@ -1011,6 +1014,7 @@ def create_transaction(request, sess):
             if not stock:
                 return Response({"error": f"Titre \"{d.get('ticker')}\" introuvable."}, status=404)
 
+            price = money(stock["price"])  # jamais le prix envoye par le client
             total = qty * price
             fees = total * FEE_RATE
             tva = fees * TVA_RATE
@@ -1448,20 +1452,3 @@ def admin_delete_user(request, user_id):
         user.delete()
     audit(request, "account.delete", target_id=user_id, before=f"{user_name} ({user_email})", after="deleted")
     return Response({"success": True, "message": f"Compte {user_name} ({user_email}) supprimé avec succès."})
-
-
-@api_view(["POST"])
-@require_auth(admin=True)
-def admin_cleanup_users(request):
-    """Supprime tous les comptes de test sauf Admin BAOU et Abou Demo."""
-    to_delete = User.objects.exclude(email__in=["admin@elephantbourse.ci", "demo@baou.ci"]).exclude(id__in=["ADMIN-001", "CLI-DEMO-001"])
-    count = to_delete.count()
-    deleted_emails = list(to_delete.values_list("email", flat=True))
-    with db_transaction.atomic():
-        LedgerEntry.objects.filter(user__in=to_delete).delete()
-        Transaction.objects.filter(user__in=to_delete).delete()
-        Message.objects.filter(user__in=to_delete).delete()
-        to_delete.delete()
-    audit(request, "account.cleanup", before=f"{count} comptes", after="admin & demo conservés")
-    return Response({"success": True, "deletedCount": count, "deletedEmails": deleted_emails})
-
