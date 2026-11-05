@@ -25,16 +25,14 @@ from django.db import IntegrityError
 from django.db import transaction as db_transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseRedirect
-from django.views.static import serve as static_serve
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
 
 from . import brvm, jeko, zavu
-from .models import AuditLog, LedgerEntry, Message, Ticket, Transaction, User
+from .models import AuditLog, LedgerEntry, Message, StoredFile, Ticket, Transaction, User
 
 JWT_SECRET = settings.JWT_SECRET
-UPLOAD_DIR = settings.UPLOAD_DIR
 
 # Seules valeurs acceptees pour User.kyc (max_length=20). "verified" est la
 # seule qui deverrouille les operations d'argent (voir create_transaction).
@@ -574,7 +572,14 @@ def uploads(request, path):
     owner_id = path.split("_", 1)[0]
     if sess.get("role") != "admin" and sess.get("userId") != owner_id:
         return HttpResponse(status=403)
-    return static_serve(request, path, document_root=UPLOAD_DIR)
+    f = StoredFile.objects.filter(name=os.path.basename(path)).first()
+    if not f:
+        return HttpResponse(status=404)
+    data = bytes(f.data)
+    ctype = "image/png" if data.startswith(b"\x89PNG") else "image/jpeg"
+    resp = HttpResponse(data, content_type=ctype)
+    resp["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 CONTRACT_PATH = os.path.join(os.path.dirname(__file__), "contract_sgi_brvm.txt")
@@ -643,10 +648,10 @@ def contract_pdf(request):
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(0, 6, "Signature electronique :", ln=True)
-    sig_path = os.path.join(UPLOAD_DIR, os.path.basename(user.contract_url))
-    if os.path.exists(sig_path):
+    sig = StoredFile.objects.filter(name=os.path.basename(user.contract_url or "")).first()
+    if sig:
         try:
-            pdf.image(sig_path, w=60)
+            pdf.image(io.BytesIO(bytes(sig.data)), w=60)
         except Exception:  # noqa: BLE001 - fichier non-image (ancien format .txt) : on l'omet, pas de 500
             pass
     pdf.set_font("Helvetica", "I", 8)
@@ -695,9 +700,7 @@ def upload_document(request):
         if not _looks_like_image(blob):
             return Response({"error": "Fichier invalide : seules les images JPEG/PNG sont acceptées."}, status=400)
         safe = f"{user.id}_{doc_type}_{os.path.basename(file_name)}".replace("/", "_")
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        with open(os.path.join(UPLOAD_DIR, safe), "wb") as fh:
-            fh.write(blob)
+        StoredFile.objects.update_or_create(name=safe, defaults={"data": blob})
         url = f"/uploads/{safe}"
         field = DOC_FIELDS.get(doc_type)
         if field:

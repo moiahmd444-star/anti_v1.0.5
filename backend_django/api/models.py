@@ -235,6 +235,14 @@ class AuditLog(models.Model):
         }
 
 
+class StoredFile(models.Model):
+    """Piece KYC stockee en base : le disque de Render gratuit est effacé à
+    chaque redémarrage, la base (Supabase) non."""
+    name = models.CharField(max_length=300, primary_key=True)
+    data = models.BinaryField()
+    created = models.DateTimeField(auto_now_add=True)
+
+
 class Ticket(models.Model):
     id = models.CharField(primary_key=True, max_length=64)
     client_name = models.CharField(max_length=200, blank=True, default="")
