@@ -49,9 +49,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setAdminMessageInput('');
 
     try {
-      const token = localStorage.getItem('adminToken') || '';
+      const token = localStorage.getItem('admin_token') || '';
       const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:3001/api';
-      await fetch(`${API_BASE}/admin/chat/${selectedUserForDetails.id}`, {
+      const res = await fetch(`${API_BASE}/admin/chat/${selectedUserForDetails.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,9 +59,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
         },
         body: JSON.stringify({ text: textToSend })
       });
+      if (!res.ok) throw new Error(String(res.status));
       alert(`💬 Message envoyé avec succès à ${selectedUserForDetails.name} !`);
     } catch (err) {
-      alert(`💬 Message envoyé à ${selectedUserForDetails.name} !`);
+      setAdminMessageInput(textToSend);
+      alert(`Échec de l'envoi du message à ${selectedUserForDetails.name}.`);
     }
   };
   const [previewDocument, setPreviewDocument] = useState<{ title: string; type: 'IMAGE' | 'PDF'; subtitle: string; contentText: string; imageUrl?: string } | null>(null);

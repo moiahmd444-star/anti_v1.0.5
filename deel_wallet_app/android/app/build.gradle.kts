@@ -14,6 +14,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    val keyProps = java.util.Properties().apply {
+        val f = rootProject.file("key.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val releaseKeys = if (keyProps.containsKey("storeFile")) signingConfigs.create("release") {
+        storeFile = file(keyProps.getProperty("storeFile"))
+        storePassword = keyProps.getProperty("storePassword")
+        keyAlias = keyProps.getProperty("keyAlias")
+        keyPassword = keyProps.getProperty("keyPassword")
+    } else null
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.deel_wallet"
@@ -27,9 +38,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Cle de publication si android/key.properties existe ; sinon cle debug
+            // (APK de test seulement, a ne pas distribuer).
+            signingConfig = if (releaseKeys != null) releaseKeys else signingConfigs.getByName("debug")
         }
     }
 }

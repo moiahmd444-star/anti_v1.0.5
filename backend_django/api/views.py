@@ -972,6 +972,8 @@ def create_transaction(request, sess):
             # de savoir POURQUOI ca retombe sur le lien fixe (403 API pas
             # activee, storeId invalide, timeout reseau, etc.) sans deviner.
             print(f"[jeko] create_payment_link a echoue, repli lien fixe : {e}", flush=True)
+            if not settings.JEKO_AMOUNT_MATCH:
+                return Response({"error": "Paiement indisponible pour le moment."}, status=503)
             # ponytail: compte Jeko pas encore active pour l'API (403
             # business_not_enabled_for_api_access) -> repli sur le lien fixe
             # du Cockpit (JEKO_FALLBACK_LINK). payment_ref prefixe MANUAL- :
@@ -1206,7 +1208,7 @@ def jeko_webhook(request):
             tx = Transaction.objects.select_for_update().filter(
                 payment_ref=link_id, type="DEPOSIT", status="pending"
             ).first()
-        if not tx and amount_xof:
+        if not tx and amount_xof and settings.JEKO_AMOUNT_MATCH:
             # ponytail: lien de secours partage (compte Jeko pas encore
             # active pour l'API, voir create_transaction) -> pas de
             # paymentLinkId par depot. Repli : on associe au plus ancien
