@@ -98,14 +98,18 @@ APPEND_SLASH = False  # les clients appellent /api/stocks sans slash final
 
 db_url = os.environ.get("DATABASE_URL")
 if db_url:
-    from urllib.parse import urlparse
+    from urllib.parse import unquote, urlparse
     url = urlparse(db_url)
+    # unquote : un mot de passe a caracteres speciaux est "percent-encode"
+    # dans l'URL (%40 pour @), urlparse ne le decode pas.
+    # Diagnostic sans secret : utilisateur et serveur vus par Django.
+    print(f"[db] user={unquote(url.username or '')!r} host={url.hostname!r} port={url.port} name={url.path.lstrip('/')!r}", flush=True)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": url.path.lstrip("/"),
-            "USER": url.username or "baou",
-            "PASSWORD": url.password or "baou",
+            "USER": unquote(url.username) if url.username else "baou",
+            "PASSWORD": unquote(url.password) if url.password else "baou",
             "HOST": url.hostname or "localhost",
             "PORT": str(url.port or 5432),
         }
