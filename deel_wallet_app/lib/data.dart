@@ -210,8 +210,9 @@ class Repo {
   static Future<void> requestPasswordReset(String email) =>
       Api.post('/api/auth/request-password-reset', {'email': email});
 
-  static Future<void> resetPassword(String token, String newPassword) =>
-      Api.post('/api/auth/reset-password', {'token': token, 'newPassword': newPassword});
+  static Future<void> resetPassword(String email, String code, String newPassword) =>
+      Api.post('/api/auth/reset-password',
+          {'email': email, 'code': code, 'newPassword': newPassword});
 
   static Future<void> updateProfile(String name, {String? whatsapp}) async {
     final body = {'firstName': name, if (whatsapp != null) 'whatsapp': whatsapp};

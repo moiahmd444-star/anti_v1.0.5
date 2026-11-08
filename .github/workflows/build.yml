@@ -59,6 +59,10 @@ jobs:
         python manage.py migrate --noinput
         python manage.py seed
 
+    - name: Check Password Reset Code
+      working-directory: backend_django
+      run: python test_reset.py
+
     - name: Run API End-to-End Test
       working-directory: backend_django
       run: |

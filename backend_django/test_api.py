@@ -113,8 +113,8 @@ def main():
     # Mot de passe oublie : meme reponse que le compte existe ou non (anti-enumeration)
     call("POST", "/api/auth/request-password-reset", {"email": email}, expect=200)
     call("POST", "/api/auth/request-password-reset", {"email": "personne@nulle-part.ci"}, expect=200)
-    call("POST", "/api/auth/reset-password", {"token": "nimportequoi", "newPassword": "nouveaumdp"}, expect=400)
-    call("POST", "/api/auth/reset-password", {"token": "nimportequoi", "newPassword": "abc"}, expect=400)
+    call("POST", "/api/auth/reset-password", {"email": email, "code": "000000", "newPassword": "nouveaumdp1"}, expect=400)
+    call("POST", "/api/auth/reset-password", {"email": email, "code": "000000", "newPassword": "abc"}, expect=400)
 
     token = call("POST", "/api/auth/login", {"email": email, "password": "password123"})["token"]
     call("GET", "/api/admin/users", token=token, expect=403)

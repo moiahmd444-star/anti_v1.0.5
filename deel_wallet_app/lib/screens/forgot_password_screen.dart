@@ -49,14 +49,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final pwd = _newPassword.text;
     final hasLetter = pwd.contains(RegExp(r'[A-Za-z]'));
     final hasDigit = pwd.contains(RegExp(r'\d'));
-    if (_code.text.trim().isEmpty || pwd.length < 8 || !hasLetter || !hasDigit) {
+    if (_code.text.trim().length != 6 || pwd.length < 8 || !hasLetter || !hasDigit) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Collez le code et saisissez un mot de passe (8 car. min, lettres et chiffres)')));
+          content: Text('Saisissez le code à 6 chiffres et un mot de passe (8 car. min, lettres et chiffres)')));
       return;
     }
     setState(() => _busy = true);
     try {
-      await Repo.resetPassword(_code.text.trim(), _newPassword.text);
+      await Repo.resetPassword(_email.text.trim(), _code.text.trim(), _newPassword.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Mot de passe mis à jour. Connectez-vous.')));
@@ -78,8 +78,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               Text(
                 _codeSent
-                    ? 'Collez le code reçu par e-mail et choisissez un nouveau mot de passe.'
-                    : "Entrez l'e-mail de votre compte : un code de réinitialisation valable 1 heure vous sera envoyé.",
+                    ? 'Saisissez le code à 6 chiffres reçu par e-mail et choisissez un nouveau mot de passe.'
+                    : "Entrez l'e-mail de votre compte : un code à 6 chiffres valable 15 minutes vous sera envoyé.",
                 style: const TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 20),
@@ -102,10 +102,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               if (_codeSent) ...[
                 TextField(
                   controller: _code,
-                  minLines: 1,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                      labelText: 'Code reçu par e-mail', alignLabelWithHint: true),
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: const InputDecoration(labelText: 'Code à 6 chiffres'),
                 ),
                 const SizedBox(height: 12),
                 TextField(

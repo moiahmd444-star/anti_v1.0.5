@@ -28,6 +28,10 @@ class User(models.Model):
     failed_login_attempts = models.IntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     must_reset_password = models.BooleanField(default=False)
+    # Code de reinitialisation a 6 chiffres : on ne stocke que son HMAC.
+    reset_code_hash = models.CharField(max_length=64, blank=True, default="")
+    reset_expires = models.DateTimeField(null=True, blank=True)
+    reset_attempts = models.IntegerField(default=0)
     joined_at = models.CharField(max_length=40, blank=True, default="")
     identity_doc_status = models.CharField(max_length=30, blank=True, default="")
     proof_of_address_status = models.CharField(max_length=30, blank=True, default="")

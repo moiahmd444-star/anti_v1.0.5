@@ -13,7 +13,9 @@ import hashlib
 import io
 import json
 import threading
+import hmac
 import os
+import secrets
 import uuid
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -372,20 +374,19 @@ def send_welcome_email(user):
         print(f"[mail] envoi echoue : {traceback.format_exc(limit=1)}", flush=True)
 
 
+def _reset_hash(user_id, code):
+    return hmac.new(JWT_SECRET.encode(), f"{user_id}:{code}".encode(), hashlib.sha256).hexdigest()
+
+
 def send_password_reset_email(user):
-    """Envoi du code de réinitialisation de mot de passe depuis baoufinance@gmail.com."""
-    token = jwt.encode(
-        {
-            "userId": user.id,
-            "purpose": "reset_password",
-            "pw": hashlib.sha256(user.password.encode()).hexdigest()[:16],
-            "exp": dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=1),
-        },
-        JWT_SECRET,
-        algorithm="HS256",
-    )
+    """Code a 6 chiffres (15 min, 5 essais), envoye depuis baoufinance@gmail.com."""
+    code = f"{secrets.randbelow(10**6):06d}"
+    user.reset_code_hash = _reset_hash(user.id, code)
+    user.reset_expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=15)
+    user.reset_attempts = 0
+    user.save(update_fields=["reset_code_hash", "reset_expires", "reset_attempts"])
     zavu.send(user.whatsapp,
-              f"BAOU Finance : votre code de réinitialisation (valable 1h) est {token}")
+              f"BAOU Finance : votre code de réinitialisation (valable 15 min) est {code}")
     if not settings.EMAIL_HOST_PASSWORD:
         print("[mail] EMAIL_HOST_PASSWORD absent : aucun e-mail envoye", flush=True)
         return
@@ -397,10 +398,11 @@ def send_password_reset_email(user):
             message=(
                 f"Bonjour {user.name},\n\n"
                 "Vous avez demandé la réinitialisation de votre mot de passe BAOU Finance.\n\n"
-                "Voici votre code de réinitialisation sécurisé (valable 1 heure) :\n\n"
-                f"{token}\n\n"
+                "Voici votre code de réinitialisation (valable 15 minutes) :\n\n"
+                f"{code}\n\n"
                 "Ouvrez l'application BAOU, allez sur \"Mot de passe oublié\", "
-                "puis collez ce code avec votre nouveau mot de passe (au moins 8 caractères avec un mélange de lettres et de chiffres).\n\n"
+                "puis saisissez ce code avec votre nouveau mot de passe (au moins 8 caractères avec un mélange de lettres et de chiffres).\n"
+                "Ne communiquez ce code à personne.\n\n"
                 "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.\n\n"
                 "L'équipe BAOU Finance\n"
                 "baoufinance@gmail.com"
@@ -439,23 +441,27 @@ def validate_password_strength(password):
 @api_view(["POST"])
 @throttle_classes([AuthThrottle])
 def reset_password(request):
-    token = request.data.get("token") or ""
+    email = (request.data.get("email") or "").strip().lower()
+    code = str(request.data.get("code") or "").strip()
     new_password = request.data.get("newPassword") or ""
     err = validate_password_strength(new_password)
     if err:
         return Response({"error": err}, status=400)
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-    except jwt.PyJWTError:
-        return Response({"error": "Code invalide ou expiré."}, status=400)
-    if payload.get("purpose") != "reset_password":
-        return Response({"error": "Code invalide."}, status=400)
-    user = User.objects.filter(id=payload.get("userId")).first()
-    if not user:
-        return Response({"error": "Compte introuvable."}, status=404)
-    if payload.get("pw") != hashlib.sha256(user.password.encode()).hexdigest()[:16]:
-        # Code deja utilise (le mot de passe a change depuis son envoi).
-        return Response({"error": "Code déjà utilisé ou expiré."}, status=400)
+    bad = Response({"error": "Code invalide ou expiré."}, status=400)
+    with db_transaction.atomic():
+        user = User.objects.select_for_update().filter(email__iexact=email).first()
+        now = dt.datetime.now(dt.timezone.utc)
+        if (not user or not user.reset_code_hash or not user.reset_expires
+                or user.reset_expires < now or user.reset_attempts >= 5):
+            return bad
+        if not hmac.compare_digest(user.reset_code_hash, _reset_hash(user.id, code)):
+            user.reset_attempts += 1
+            user.save(update_fields=["reset_attempts"])
+            return bad
+        user.reset_code_hash = ""
+        user.reset_expires = None
+        user.reset_attempts = 0
+        user.save(update_fields=["reset_code_hash", "reset_expires", "reset_attempts"])
     user.password = hash_password(new_password)
     # Reinitialisation = fin du verrouillage, qu'il ait ete declenche ou non.
     user.failed_login_attempts = 0
