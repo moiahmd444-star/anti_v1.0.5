@@ -12,7 +12,7 @@ on:
 jobs:
   build-apk:
     name: Build Flutter APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
@@ -36,6 +36,9 @@ jobs:
           ~/.gradle/wrapper
         key: gradle-${{ runner.os }}-${{ hashFiles('deel_wallet_app/android/**/*.gradle*', 'deel_wallet_app/android/gradle/wrapper/gradle-wrapper.properties', 'deel_wallet_app/pubspec.lock') }}
         restore-keys: gradle-${{ runner.os }}-
+
+    - name: Flutter version
+      run: flutter --version
 
     - name: Install Dependencies
       run: flutter pub get
