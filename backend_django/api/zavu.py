@@ -22,10 +22,12 @@ API_BASE = "https://api.zavu.dev/v1"
 def _to_e164(local_number):
     """Numero local ivoirien ('07 00 00 00 00') -> E.164 ('+2250700000000').
     Meme regle que openWhatsApp() cote Flutter (lib/screens/common.dart)."""
+    # Depuis 2021 les numeros ivoiriens ont 10 chiffres et gardent le 0
+    # initial a l'international (+225 07 00 00 00 00).
     digits = re.sub(r"[^0-9]", "", local_number or "")
-    if digits.startswith("0"):
-        digits = digits[1:]
-    return f"+225{digits}" if digits else ""
+    if len(digits) == 10:
+        return f"+225{digits}"
+    return f"+{digits}" if digits else ""
 
 
 def send(local_number, text):

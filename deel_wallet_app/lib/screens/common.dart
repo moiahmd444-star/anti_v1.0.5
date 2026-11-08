@@ -46,7 +46,9 @@ void infoDialog(BuildContext context, String title, String body) {
 /// converti en indicatif +225). Affiche un message d'erreur si aucune app
 /// WhatsApp/navigateur ne peut ouvrir le lien (device sans WhatsApp installe).
 Future<void> openWhatsApp(BuildContext context, String phone, {String message = ''}) async {
-  final clean = '225${phone.replaceAll(RegExp(r'[^0-9]'), '').replaceFirst(RegExp(r'^0'), '')}';
+  // Numero ivoirien a 10 chiffres : le 0 initial fait partie du numero (+225 05...).
+  final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+  final clean = digits.length == 10 ? '225$digits' : digits;
   final uri = Uri.parse('https://wa.me/$clean${message.isEmpty ? '' : '?text=${Uri.encodeComponent(message)}'}');
   final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!ok && context.mounted) {

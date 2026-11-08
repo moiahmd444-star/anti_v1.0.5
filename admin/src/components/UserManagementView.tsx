@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { User } from '../types';
+
+// Numero ivoirien a 10 chiffres : le 0 initial fait partie du numero (+225 07...).
+// Sans l'indicatif, wa.me repond "numero invalide".
+const waLink = (phone: string, text: string) => {
+  let d = (phone || '').replace(/\D/g, '');
+  if (d.length === 10) d = '225' + d;
+  return `https://wa.me/${d}?text=${encodeURIComponent(text)}`;
+};
 import { 
   Users, 
   UserCheck, 
@@ -453,9 +461,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                         {user.whatsapp && user.whatsapp !== 'Non renseigné' && (
                           <button
                             onClick={() => {
-                              const cleanNum = user.whatsapp.replace(/[^0-9]/g, '');
-                              const message = encodeURIComponent(`Bonjour ${user.name}, je suis M. Cissé l'administrateur de BAOU Finance concernant votre ouverture de compte SGI.`);
-                              window.open(`https://wa.me/${cleanNum}?text=${message}`, '_blank');
+                              window.open(waLink(user.whatsapp, `Bonjour ${user.name}, je suis M. Cissé l'administrateur de BAOU Finance concernant votre ouverture de compte SGI.`), '_blank');
                             }}
                             className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold text-[11px] rounded-lg transition-all active:scale-95 shadow-xs flex items-center gap-1"
                             title="Envoyer un message WhatsApp au client"
@@ -554,9 +560,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                       {selectedUserForDetails.whatsapp && selectedUserForDetails.whatsapp !== 'Non renseigné' && (
                         <button
                           onClick={() => {
-                            const cleanNum = selectedUserForDetails.whatsapp.replace(/[^0-9]/g, '');
-                            const message = encodeURIComponent(`Bonjour ${selectedUserForDetails.name}, je suis M. Cissé l'administrateur de BAOU Finance concernant votre dossier d'ouverture de compte SGI.`);
-                            window.open(`https://wa.me/${cleanNum}?text=${message}`, '_blank');
+                            window.open(waLink(selectedUserForDetails.whatsapp, `Bonjour ${selectedUserForDetails.name}, je suis M. Cissé l'administrateur de BAOU Finance concernant votre dossier d'ouverture de compte SGI.`), '_blank');
                           }}
                           className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs transition-all flex items-center gap-1"
                         >
@@ -749,8 +753,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                   {selectedUserForDetails.whatsapp && (
                     <button
                       onClick={() => {
-                        const cleanPhone = (selectedUserForDetails.whatsapp || '').replace(/[^0-9]/g, '');
-                        window.open(`https://wa.me/${cleanPhone}?text=Bonjour%20${encodeURIComponent(selectedUserForDetails.name)},%20concernant%20votre%20compte%20BAOU%20Finance...`, '_blank');
+                        window.open(waLink(selectedUserForDetails.whatsapp || '', `Bonjour ${selectedUserForDetails.name}, concernant votre compte BAOU Finance...`), '_blank');
                       }}
                       className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1.5 shadow-xs"
                     >
