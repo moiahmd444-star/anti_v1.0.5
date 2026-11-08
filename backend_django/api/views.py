@@ -344,7 +344,10 @@ def send_welcome_email(user):
     link = f"{settings.BACKEND_PUBLIC_URL}/api/auth/verify-email?token={verify_token}"
     zavu.send(user.whatsapp,
               f"Bienvenue sur BAOU Finance, {user.name} ! Votre compte a bien été créé.")
-    if not settings.EMAIL_HOST_PASSWORD or user.email.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
+    if not settings.EMAIL_HOST_PASSWORD:
+        print("[mail] EMAIL_HOST_PASSWORD absent : aucun e-mail envoye", flush=True)
+        return
+    if user.email.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
         return
     try:
         send_mail(
@@ -365,7 +368,8 @@ def send_welcome_email(user):
             fail_silently=False,
         )
     except Exception:  # noqa: BLE001 - SMTP down/creds invalides : ne bloque pas l'inscription
-        pass
+        import traceback
+        print(f"[mail] envoi echoue : {traceback.format_exc(limit=1)}", flush=True)
 
 
 def send_password_reset_email(user):
@@ -382,7 +386,10 @@ def send_password_reset_email(user):
     )
     zavu.send(user.whatsapp,
               f"BAOU Finance : votre code de réinitialisation (valable 1h) est {token}")
-    if not settings.EMAIL_HOST_PASSWORD or user.email.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
+    if not settings.EMAIL_HOST_PASSWORD:
+        print("[mail] EMAIL_HOST_PASSWORD absent : aucun e-mail envoye", flush=True)
+        return
+    if user.email.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
         return
     try:
         send_mail(
@@ -403,7 +410,8 @@ def send_password_reset_email(user):
             fail_silently=False,
         )
     except Exception:  # noqa: BLE001 - SMTP down/creds invalides : ne bloque jamais l'appel
-        pass
+        import traceback
+        print(f"[mail] envoi echoue : {traceback.format_exc(limit=1)}", flush=True)
 
 
 @api_view(["POST"])
