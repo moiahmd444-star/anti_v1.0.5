@@ -45,6 +45,9 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "baoufinance@gmail.com")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", f"BAOU Finance <{EMAIL_HOST_USER}>")
 EMAIL_TIMEOUT = 10
+# Envoi via Google Apps Script (HTTPS) quand le SMTP sortant est bloque (Render gratuit).
+MAIL_WEBHOOK_URL = os.environ.get("MAIL_WEBHOOK_URL", "")
+MAIL_WEBHOOK_SECRET = os.environ.get("MAIL_WEBHOOK_SECRET", "")
 
 # URL publique du backend (ngrok ou domaine reel) utilisee pour construire le
 # lien de confirmation dans l'email -- doit etre a jour dans .env.docker,

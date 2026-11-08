@@ -332,6 +332,40 @@ def login(request):
     return Response({"success": True, "token": token, "user": user.as_dict()})
 
 
+def _send_email(to, subject, body):
+    """Envoi d'e-mail qui ne fait jamais echouer l'appel appelant.
+
+    shortcut: Render (offre gratuite) bloque le SMTP sortant (Errno 101) ->
+    si MAIL_WEBHOOK_URL est defini, on passe par un script Google Apps Script
+    (HTTPS, envoie depuis baoufinance@gmail.com, ~100 mails/jour). Passer a un
+    service transactionnel (Brevo, Resend...) au-dela de ce volume."""
+    if to.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
+        return
+    try:
+        if settings.MAIL_WEBHOOK_URL:
+            import urllib.request
+            req = urllib.request.Request(
+                settings.MAIL_WEBHOOK_URL,
+                data=json.dumps({"secret": settings.MAIL_WEBHOOK_SECRET, "to": to,
+                                 "subject": subject, "body": body}).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=20) as r:
+                answer = r.read(200).decode(errors="replace")
+            if "ok" not in answer:
+                print(f"[mail] webhook a refuse : {answer!r}", flush=True)
+            return
+        if not settings.EMAIL_HOST_PASSWORD:
+            print("[mail] ni MAIL_WEBHOOK_URL ni EMAIL_HOST_PASSWORD : aucun e-mail envoye", flush=True)
+            return
+        send_mail(subject=subject, message=body, from_email=settings.DEFAULT_FROM_EMAIL,
+                  recipient_list=[to], fail_silently=False)
+    except Exception:  # noqa: BLE001 - un e-mail perdu ne doit jamais casser l'operation
+        import traceback
+        print(f"[mail] envoi echoue : {traceback.format_exc(limit=1)}", flush=True)
+
+
 def send_welcome_email(user):
     """Email de bienvenue et confirmation d'inscription envoyé depuis baoufinance@gmail.com."""
     verify_token = jwt.encode(
@@ -346,32 +380,17 @@ def send_welcome_email(user):
     link = f"{settings.BACKEND_PUBLIC_URL}/api/auth/verify-email?token={verify_token}"
     zavu.send(user.whatsapp,
               f"Bienvenue sur BAOU Finance, {user.name} ! Votre compte a bien été créé.")
-    if not settings.EMAIL_HOST_PASSWORD:
-        print("[mail] EMAIL_HOST_PASSWORD absent : aucun e-mail envoye", flush=True)
-        return
-    if user.email.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
-        return
-    try:
-        send_mail(
-            subject="Bienvenue sur BAOU Finance — Inscription confirmée",
-            message=(
-                f"Bonjour {user.name},\n\n"
-                "Félicitations ! Votre inscription sur BAOU Finance a été effectuée avec succès.\n\n"
-                "Vous pouvez dès à présent vous connecter sur l'application mobile BAOU Finance pour compléter "
-                "votre dossier KYC, signer votre contrat SGI et commencer à investir en bourse (BRVM).\n\n"
-                f"Pour confirmer votre adresse e-mail, vous pouvez ouvrir ce lien depuis votre téléphone :\n{link}\n\n"
-                "Si vous n'êtes pas à l'origine de cette inscription, veuillez contacter le support à baoufinance@gmail.com.\n\n"
-                "Cordialement,\n"
-                "L'équipe BAOU Finance\n"
-                "baoufinance@gmail.com"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-    except Exception:  # noqa: BLE001 - SMTP down/creds invalides : ne bloque pas l'inscription
-        import traceback
-        print(f"[mail] envoi echoue : {traceback.format_exc(limit=1)}", flush=True)
+    _send_email(user.email, "Bienvenue sur BAOU Finance — Inscription confirmée", (
+            f"Bonjour {user.name},\n\n"
+            "Félicitations ! Votre inscription sur BAOU Finance a été effectuée avec succès.\n\n"
+            "Vous pouvez dès à présent vous connecter sur l'application mobile BAOU Finance pour compléter "
+            "votre dossier KYC, signer votre contrat SGI et commencer à investir en bourse (BRVM).\n\n"
+            f"Pour confirmer votre adresse e-mail, vous pouvez ouvrir ce lien depuis votre téléphone :\n{link}\n\n"
+            "Si vous n'êtes pas à l'origine de cette inscription, veuillez contacter le support à baoufinance@gmail.com.\n\n"
+            "Cordialement,\n"
+            "L'équipe BAOU Finance\n"
+            "baoufinance@gmail.com"
+        ))
 
 
 def _reset_hash(user_id, code):
@@ -387,33 +406,18 @@ def send_password_reset_email(user):
     user.save(update_fields=["reset_code_hash", "reset_expires", "reset_attempts"])
     zavu.send(user.whatsapp,
               f"BAOU Finance : votre code de réinitialisation (valable 15 min) est {code}")
-    if not settings.EMAIL_HOST_PASSWORD:
-        print("[mail] EMAIL_HOST_PASSWORD absent : aucun e-mail envoye", flush=True)
-        return
-    if user.email.lower().endswith(("@baou.ci", "@example.com", "@test.ci", "@test.com", "@local")):
-        return
-    try:
-        send_mail(
-            subject="BAOU Finance — Réinitialisation de votre mot de passe",
-            message=(
-                f"Bonjour {user.name},\n\n"
-                "Vous avez demandé la réinitialisation de votre mot de passe BAOU Finance.\n\n"
-                "Voici votre code de réinitialisation (valable 15 minutes) :\n\n"
-                f"{code}\n\n"
-                "Ouvrez l'application BAOU, allez sur \"Mot de passe oublié\", "
-                "puis saisissez ce code avec votre nouveau mot de passe (au moins 8 caractères avec un mélange de lettres et de chiffres).\n"
-                "Ne communiquez ce code à personne.\n\n"
-                "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.\n\n"
-                "L'équipe BAOU Finance\n"
-                "baoufinance@gmail.com"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-    except Exception:  # noqa: BLE001 - SMTP down/creds invalides : ne bloque jamais l'appel
-        import traceback
-        print(f"[mail] envoi echoue : {traceback.format_exc(limit=1)}", flush=True)
+    _send_email(user.email, "BAOU Finance — Réinitialisation de votre mot de passe", (
+            f"Bonjour {user.name},\n\n"
+            "Vous avez demandé la réinitialisation de votre mot de passe BAOU Finance.\n\n"
+            "Voici votre code de réinitialisation (valable 15 minutes) :\n\n"
+            f"{code}\n\n"
+            "Ouvrez l'application BAOU, allez sur \"Mot de passe oublié\", "
+            "puis saisissez ce code avec votre nouveau mot de passe (au moins 8 caractères avec un mélange de lettres et de chiffres).\n"
+            "Ne communiquez ce code à personne.\n\n"
+            "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.\n\n"
+            "L'équipe BAOU Finance\n"
+            "baoufinance@gmail.com"
+        ))
 
 
 @api_view(["POST"])
