@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { Page } from '../types';
 import {
   LayoutDashboard,
-  Sparkles,
   ArrowLeftRight,
   Users,
-  Settings,
   HelpCircle,
   LogOut,
   TrendingUp,
@@ -35,11 +33,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [logoFailed, setLogoFailed] = useState(false);
   const menuItems = [
-    { id: Page.Dashboard,       label: 'Tableau de bord', icon: LayoutDashboard },
-    { id: Page.DashboardBaou,   label: 'Dashboard BAOU',  icon: Sparkles },
-    { id: Page.Transactions,    label: 'Transactions',    icon: ArrowLeftRight },
-    { id: Page.UserManagement,  label: 'Clients',         icon: Users },
-    { id: Page.Settings,        label: 'Paramètres',      icon: Settings },
+    { id: Page.DashboardBaou,   label: 'Accueil',  icon: LayoutDashboard },
+    { id: Page.Transactions,    label: 'Ordres',   icon: ArrowLeftRight },
+    { id: Page.UserManagement,  label: 'Clients',  icon: Users },
+    { id: Page.Support,         label: 'Support',  icon: HelpCircle },
   ];
 
   return (
@@ -102,14 +99,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* ── Utilitaires ─────────────────────────────────── */}
       <div className="flex flex-col gap-1 px-3">
-        <button
-          onClick={() => setCurrentPage(Page.Support)}
-          className={`sidebar-nav-item${currentPage === Page.Support ? ' active' : ''}`}
-        >
-          <HelpCircle className="w-[18px] h-[18px] shrink-0" />
-          <span>Support</span>
-        </button>
-
         <button
           onClick={onLogout}
           className="sidebar-nav-item danger"

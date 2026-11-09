@@ -85,7 +85,7 @@ export const DashboardBaouView: React.FC<DashboardBaouViewProps> = ({
             Tableau de bord BAOU
           </h2>
           <p className="font-sans text-[14px] text-black/60 mt-0.5">
-            Nouvelle version aux couleurs de l'application mobile.
+            Ordres à valider, clients et support en un coup d'œil.
           </p>
         </div>
         <div className="flex gap-3 shrink-0">

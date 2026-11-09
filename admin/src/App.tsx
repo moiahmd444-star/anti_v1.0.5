@@ -3,11 +3,9 @@ import { Page, Transaction, User, SupportTicket } from './types';
 import { initialMarketQuotes } from './data';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
-import { DashboardView } from './components/DashboardView';
 import { DashboardBaouView } from './components/DashboardBaouView';
 import { TransactionsView } from './components/TransactionsView';
 import { UserManagementView } from './components/UserManagementView';
-import { SettingsView } from './components/SettingsView';
 import { SupportView } from './components/SupportView';
 import {
   Bell,
@@ -157,7 +155,7 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
 
   // ── Navigation & States ─────────────────────────────────
-  const [currentPage, setCurrentPage] = useState<Page>(Page.Dashboard);
+  const [currentPage, setCurrentPage] = useState<Page>(Page.DashboardBaou);
   const [searchQuery, setSearchQuery] = useState('');
 
   // ── Central State stores ────────────────────────────────
@@ -292,7 +290,7 @@ export default function App() {
     setUsers([]);
     setTransactions([]);
     setTickets([]);
-    setCurrentPage(Page.Dashboard);
+    setCurrentPage(Page.DashboardBaou);
     triggerToast('Vous avez été déconnecté avec succès.', 'info');
   };
 
@@ -328,7 +326,7 @@ export default function App() {
     // ponytail: un depot est credite automatiquement par le webhook Jeko
     // (voir jeko_webhook cote backend, qui refuse deja ce PATCH) -- garde
     // ici aussi pour ne pas meme tenter l'appel depuis les widgets tableau
-    // de bord qui n'ont pas leur propre filtre (DashboardView, DashboardBaouView).
+    // de bord qui n'ont pas leur propre filtre (DashboardBaouView).
     if (transactions.find(t => t.id === id)?.type === 'DEPOSIT') {
       triggerToast('Les dépôts sont crédités automatiquement, aucune validation requise.', 'error');
       return;
@@ -755,19 +753,6 @@ export default function App() {
       <main className="pl-[280px] pt-16 min-h-screen">
         <div className="p-8 max-w-7xl mx-auto">
 
-          {currentPage === Page.Dashboard && (
-            <DashboardView
-              transactions={transactions}
-              onSelectTransaction={(tx) => {
-                setSelectedTransaction(tx);
-                setCurrentPage(Page.Transactions);
-              }}
-              onApproveTransaction={handleApproveTransaction}
-              onRejectTransaction={handleRejectTransaction}
-              onNewTransactionClick={() => setShowNewOpModal(true)}
-            />
-          )}
-
           {currentPage === Page.DashboardBaou && (
             <DashboardBaouView
               transactions={transactions}
@@ -801,12 +786,6 @@ export default function App() {
               onAddUser={handleAddUser}
               onUpdateKyc={handleUpdateKyc}
               onToggleSuspend={handleToggleSuspend}
-            />
-          )}
-
-          {currentPage === Page.Settings && (
-            <SettingsView
-              onSave={() => triggerToast('Paramètres du système enregistrés avec succès !', 'success')}
             />
           )}
 
